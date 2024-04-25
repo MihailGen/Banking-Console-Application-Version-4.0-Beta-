@@ -1,6 +1,6 @@
-Se
-Ki
-1980
-2
+Test
+Test
+0
+Test
 1000
-100
+0
