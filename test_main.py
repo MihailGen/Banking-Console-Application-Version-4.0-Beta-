@@ -4,12 +4,53 @@ from main import money_withdr
 from main import moneyadd
 from main import pass_check
 from main import trans_filtering_logics
+from main import postponed_trigger
+from main import postponed_to_file
+from main import check_login_and_passw
+from main import hash_to_file
+from main import check_log
+from main import hash_funct
+from main import client_from_file
+from main import transaction_from_file
+from main import transactionfout
+
 
 transactions = {
     "Ot Vasi": 100,
     "Ot Juri": 200
 }
 
+def test_transactionfout():
+    assert transactionfout(transactions) == True
+
+def test_transaction_from_file():
+    assert transaction_from_file() == transactions
+
+def test_client_from_file():
+    assert client_from_file() == ("Test", "Test", 0, "Test", 1000, 0)
+
+def test_hash_funct():
+    assert hash_funct("1") == "4949"
+
+def test_check_log():
+    assert check_log("MiHa") == True
+
+def test_hash_to_file():
+    assert hash_to_file("4949", "MiHa") == True
+
+def test_check_login_and_passw():
+    assert check_login_and_passw("MiHa", "1") == True
+
+
+def test_postponed_to_file_big():
+    assert postponed_to_file("MiHa", "VajaPupj", 1200) == True
+
+def test_postponed_to_file():
+    assert postponed_to_file("MiHa", "VajaPupj", 200) == False
+
+
+def test_postponed_trigger():
+    assert postponed_trigger("MiHa") == True
 
 def test_apply_trans_small_limit():
     assert apply_trans(100, 160, {
