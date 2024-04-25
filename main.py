@@ -2,32 +2,73 @@ import datetime
 import os.path
 
 
-# Writing postponed payment to file login.postponed.txt
-def  postponed_to_file(login_sender, login_rec, summ):
-    if check_log(login_rec):
+# Trigger automatic execution of postponed payments after receipt of funds
+def postponed_trigger(login_sndr):
+    money = int(client_from_file()[5])
+    postponed_tmp = {}
+    # reading postponed payments from file to a temporary dictionary and execute postponed payments
+    with open('postponed_payments/' + login_sndr + '.' + 'postponed.txt') as postponedfout:
+        count = 0
+        flag = 0
+        for line in postponedfout:
+            count += 1
+            if (count % 2) != 0:
+                comment_tmp = line[:-1]
+            else:
+                if money >= int(line[:-1]):
+                    postponed_tmp[comment_tmp] = 0
+                    money -= int(line[:-1])  # execute postponed payments
+                    flag += 1
+                    print("\n*************\n" +str(flag) + ". The postponed payments to " + comment_tmp + " for " + line[
+                                :-1] + " rubles\nhas been executed!\n")
+                else:
+                    postponed_tmp[comment_tmp] = int(line[:-1])
+    # Rewriting postponed payments file
+    if flag > 0:
+        with open('postponed_payments/' + login_sndr + '.' + 'postponed.txt', "w") as tranfout:
+            for recipient, payments_summ in postponed_tmp.items():
+                if payments_summ > 0:
+                    tranfout.write(recipient + '\n')
+                    tranfout.write(str(payments_summ) + '\n')
+        # Writing the summ in to file after execute postponed payments
+        clientfout(client_from_file()[0], client_from_file()[1], client_from_file()[2], client_from_file()[3],
+                   client_from_file()[4], money)
+        return False
+    return True
+
+
+# Writing postponed payment to file "postponed_payments/login.postponed.txt"
+def postponed_to_file(login_sender, login_rec, summ):
+    money = client_from_file()[5]
+    if (summ > money):
         if not os.path.isdir('postponed_payments'):
             try:
                 os.mkdir('postponed_payments')
             except FileExistsError:
-                print('Error! Please contact an administrator.')
+                print('\n*************\nError! Please contact an administrator.\n*************\n')
                 return False
         try:
             # writing in the end of file if the file exist
             with open('postponed_payments/' + login_sender + '.' + 'postponed.txt', 'r+') as pstpnd:
                 pstpnd.seek(0, 2)
                 pstpnd.write(login_rec + "\n")
-                pstpnd.write(summ + "\n")
+                pstpnd.write(str(summ) + "\n")
+                print("\n*************\nNew postponed payment to " + login_rec + "\nin the amount of " +
+                      str(summ) + " rubles\nhas been successfully created!!!\n")
         except FileNotFoundError:
-            # if the file not exist creating new file and writing in the beginning
+            # if the file not exist, creating new file and writing in the beginning
             try:
                 with open('postponed_payments/' + login_sender + '.' + 'postponed.txt', 'w') as pstpnd:
                     pstpnd.write(login_rec + "\n")
-                    pstpnd.write(summ + "\n")
+                    pstpnd.write(str(summ) + "\n")
+                    print("New postponed payment to " + log_rec + "\nin the amount of " +
+                          str(summ) + " rubles\nhas been successfully created!!!\n")
             except FileNotFoundError:
                 print('Error! Please contact an administrator.')
                 return False
         return True
     else:
+        print("\n*************\nYou have enough funds to make this payment!\nPostponed payment is not saved!\n")
         return False
 
 
@@ -39,12 +80,14 @@ def check_login_and_passw(login, passw):
                 if hash_funct(passw) == file_hash.readline():
                     file_hash.close()
                 else:
-                    print('Incorrect password\n')
+                    print('\n*************\nIncorrect password')
                     return False
         except FileNotFoundError:
             print('A system error has occurred!\n Please contact an administrator.\n')
             return False
-    return True
+        return True
+    else:
+        return False
 
 
 # Writing Hash for password in to file login.passwordhash.txt
@@ -67,7 +110,7 @@ def hash_to_file(hsh, login):
 # Checking login
 def check_log(login):
     if not os.path.isfile('bank_clients/' + login + '.' + 'passwordhash.txt'):
-        print('Unknown login! Please contact an administrator.\n')
+        print('\n*************\nUnknown login! Please contact an administrator.\n')
         return False
     return True
 
@@ -132,29 +175,29 @@ def account_creation():
         hash_to_file(hash_funct(password), login)
         clientfout(name, surname, year_of_birth, password, 1_000, 0)  # 1000 - beginning limit.
         # 0 - beginning money balance
-        print("Congratulation!!!\nYou have successfully created new account\nYour login:  " + login + "\n")
+        print("\n*************\nCongratulation!!!\nYou have successfully created new account\nYour login:  " + login + "\n")
     return flag
 
 
 # Money addition
 def moneyadd(money_func, bill_func, acc_limit):
     if (money_func + bill_func) > acc_limit:
-        print("The limit on your account has been exceeded!\nOperation canceled")
+        print("\n*************\nThe limit on your account has been exceeded!\nOperation canceled")
     else:
         money_func += bill_func
-        print("Account has been successfully added!\n")
+        print("\n*************\nAccount has been successfully added!\n")
     return money_func
 
 
 # Money withdraw function
 def money_withdr(money_witdrw, bill_withdr):
-    print("Your current balance is: " + str(money_witdrw))
+    print("\n*************\nYour current balance is: " + str(money_witdrw))
     if (money_witdrw - bill_withdr) < 0:
-        print("You do not have enough money\nto complete this operation")
+        print("\n*************\nYou do not have enough money\nto complete this operation")
     else:
         money_witdrw -= bill_withdr
-        print("Withdrawal completed successfully")
-        print("Your current balance is: " + str(money_witdrw) + "\n")
+        print("\n*************\nWithdrawal completed successfully")
+        print("\n*************\nYour current balance is: " + str(money_witdrw) + "\n")
     return money_witdrw
 
 
@@ -162,11 +205,11 @@ def money_withdr(money_witdrw, bill_withdr):
 def apply_trans(money_in_account, limit_account, transactions_func):
     for comment_apply, amount_apply in transactions_func.items():
         if (money_in_account + int(amount_apply)) > limit_account:
-            print("Transaction: " + comment_apply + "\ncannot be applied (limit exceeded)\n")
+            print("\n*************\nTransaction: " + comment_apply + "\ncannot be applied (limit exceeded)\n")
         else:
             if int(transactions_func[comment_apply]) > 0:
                 money_in_account += int(amount_apply)
-                print("Transaction: " + comment_apply + "\nsuccessfully applied\n")
+                print("\n*************\nTransaction: " + comment_apply + "\nsuccessfully applied\n")
                 transactions_func[comment_apply] = 0
     transactionfout(transactions)  # Commented for Test only
     return money_in_account
@@ -188,7 +231,7 @@ def clientfout(name_to_file, surname_to_file, year_of_birth_to_file, password_to
 # Password checking
 def pass_check(passwd_tmp, password_fail):
     if password_fail != passwd_tmp or not password_fail:
-        print("Wrong password!")
+        print("\n*************\nWrong password!")
         return False
     else:
         return True
@@ -214,13 +257,13 @@ def client_from_file():
                 elif count == 6:
                     money_from_file = int(line[:-1])
     except FileNotFoundError:
-        print("Your bank data is lost!\nPlease contact to the bank administration!")
+        print("\n*************\nYour bank data is lost!\nPlease contact to the bank administration!")
         exit()
     clientfin.close()
     try:
         client_from_file_kortezh = (name, surname, year_of_birth, password, account_limit, money_from_file)
     except UnboundLocalError:
-        print("Your bank data is lost!\nPlease contact to the bank administration!")
+        print("\n*************\nYour bank data is lost!\nPlease contact to the bank administration!")
         exit()
     return client_from_file_kortezh
 
@@ -241,18 +284,24 @@ def transaction_from_file():
 
 # Writing Transaction dictionary in to file
 def transactionfout(trans):
-    with open('transactions.txt', "w") as tranfout:
-        for comment2, amount2 in trans.items():
-            if amount2 > 0:
-                tranfout.write(comment2 + '\n')
-                tranfout.write(str(amount2) + '\n')
+    try:
+        with open('transactions.txt', "w") as tranfout:
+            for comment2, amount2 in trans.items():
+                if amount2 > 0:
+                    tranfout.write(comment2 + '\n')
+                    tranfout.write(str(amount2) + '\n')
+    except FileNotFoundError:
+        print("\n*************\nFatal ERROR!\nPlease contact to the bank")
+        return False
+    return True
 
 
 # Starting cycle of programs
-print("\n******************************************")
+print("\n*********************************************")
 print("Welcome to the console banking application")
-print("Version 4.0_beta")
-print("******************************************\n")
+print("Version 4.0_beta \nauthor Mihail Genzik "
+      "email: genziks@inbox.lv")
+print("*********************************************\n")
 
 print("Hi! Friend!\nRestore data from file?")
 choice = "N"
@@ -265,7 +314,7 @@ if choice == "Y" or choice == "y":
     if check_login_and_passw(login, passwd):
         client_restored = client_from_file()
         transactions = transaction_from_file()
-        print("Your data are restored!\n")
+        # print("Your data are restored!\n")
     else:
         client_restored = ("", "", 0, "", 0, 0)
         transactions = {}
@@ -273,7 +322,7 @@ if choice == "Y" or choice == "y":
 else:
     client_restored = ("", "", 0, "", 0, 0)
     transactions = {}
-    print("Your data isn`t restored!\n")
+    print("\n*************\nYour data isn`t restored!\n")
 while True:
     print("What would you like to do?")
     print("1. Create a bank account")
@@ -288,7 +337,10 @@ while True:
     print("10. Postponed payment")
     print("11. Exit\n")
     if __name__ == "__main__":
-        choice = int(input("Enter your choice: "))
+        try:
+            choice = int(input("Enter your choice: "))
+        except ValueError:
+            print("Invalid number, please try again.")
 
     # Bank account creation
     if choice == 1:
@@ -296,7 +348,8 @@ while True:
 
     # Money addition
     elif choice == 2:
-        if check_log(input("Your login: ")):
+        log = input("Your login: ")
+        if check_log(log):
             bill_in = 0
             try:
                 # if __name__ == "__main__":
@@ -306,6 +359,8 @@ while True:
             money = moneyadd(client_from_file()[5], bill_in, client_from_file()[4])
             clientfout(client_from_file()[0], client_from_file()[1], client_from_file()[2], client_from_file()[3],
                        client_from_file()[4], money)
+            postponed_trigger(log)
+
 
     # Money withdraw
     elif choice == 3:
@@ -326,7 +381,7 @@ while True:
         login = input("Your login: ")
         passwd = input("Your password: ")
         if check_login_and_passw(login, passwd):
-            print("Your current balance is: " + str(client_from_file()[5]) + "\n")
+            print("\n*************\nYour current balance is: " + str(client_from_file()[5]) + "\n")
 
     # Expected transactions
     elif choice == 5:
@@ -383,15 +438,17 @@ while True:
 
     # postponed payment
     elif choice == 10:
-        login = input("Your login: ")
+        if __name__ == "__main__":
+            login = input("Your login: ")
         if check_log(login):
             log_rec = input("Please enter the recipient's login: ")
             if check_log(log_rec):
                 try:
                     summ = int(input("Please enter the summ of money: "))
-                    postponed_to_file(login, log_rec, str(summ))
+                    postponed_to_file(login, log_rec, summ)
                 except ValueError:
                     print("Please enter a valid number")
+
 
     # Exit
     elif choice == 11:
@@ -401,4 +458,4 @@ while True:
     # Other operation numbers
     else:
         print("Wrong operation number, please try again!" + "\n")
-        # break
+        break
